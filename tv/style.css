@@ -1,0 +1,70 @@
+/* guest-tv-lite, the TV screen. The look is guest-tv's (web/tv.css): designed at 1920x1080,
+   1rem = 16px at that width, text never under 23px because it is read from the couch. */
+
+@font-face { font-family: "Inter"; font-weight: 100 900; font-display: block; src: url(fonts/inter-latin-wght-normal.woff2) format("woff2"); }
+@font-face { font-family: "Antonio"; font-weight: 300; font-display: block; src: url(fonts/antonio-latin-300.woff2) format("woff2"); }
+
+:root {
+  --text: #f7f6f3;
+  --safe-x: 5rem;
+  --safe-y: 3.75rem;
+  --glass: rgba(22, 22, 28, 0.34);
+  --rim: rgba(255, 255, 255, 0.16);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html { font-size: calc(100vw / 120); background: #0b0b0e; color: var(--text); }
+body {
+  width: 100vw; height: 100vh; overflow: hidden; background: #0b0b0e;
+  font-family: "Inter", system-ui, sans-serif; font-weight: 450; letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased; cursor: none; user-select: none; -webkit-user-select: none;
+}
+
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(1.75rem) saturate(170%); backdrop-filter: blur(1.75rem) saturate(170%);
+  box-shadow: inset 0 0 0 0.0625rem var(--rim), inset 0 0.0625rem 0 rgba(255, 255, 255, 0.14), 0 1.5rem 3.75rem rgba(0, 0, 0, 0.28);
+}
+
+/* ---------- photo, glass clock, cut-out ---------- */
+.scene { position: fixed; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; }
+.scene img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; animation: drift 80s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.06) translate(-0.6%, -0.4%); } }
+.scene .shade {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.36) 0%, rgba(0, 0, 0, 0) 24%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 46%, rgba(0, 0, 0, 0.42) 66%, rgba(0, 0, 0, 0.78) 100%);
+}
+.clock {
+  position: absolute; left: 0; right: 0; top: 9rem; text-align: center; white-space: nowrap;
+  font-family: "Antonio", "Arial Narrow", sans-serif; font-weight: 300; font-size: 25rem; line-height: 0.82; letter-spacing: -0.02em;
+  filter: drop-shadow(0 0.375rem 1.75rem rgba(0, 0, 0, 0.16)); animation: drift 80s ease-in-out infinite alternate;
+}
+.clock .fill {
+  display: block; padding: 0.2em 0; margin: -0.2em 0; color: transparent;
+  background-image: url(photo-glass.jpg);
+  -webkit-background-clip: text; background-clip: text; background-size: 100vw 100vh; background-repeat: no-repeat;
+  filter: brightness(1.12) saturate(1.15);
+}
+.clock .rim { position: absolute; top: 0; right: 0; bottom: 0; left: 0; color: rgba(255, 255, 255, 0.08); -webkit-text-stroke: 0.09rem rgba(255, 255, 255, 0.55); }
+.clock .sheen {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0; color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, 0.22) 100%);
+}
+
+/* ---------- welcome, low on the left ---------- */
+.hello { position: fixed; left: var(--safe-x); bottom: calc(var(--safe-y) + 2rem); max-width: 80rem; text-shadow: 0 0.125rem 1.5rem rgba(0, 0, 0, 0.45); }
+.hello h1 { font-size: 5rem; line-height: 5.75rem; font-weight: 680; letter-spacing: -0.025em; }
+.hello p { margin-top: 0.75rem; font-size: 2.25rem; line-height: 2.75rem; color: rgba(255, 255, 255, 0.86); }
+
+/* ---------- weather, top right ---------- */
+.weather {
+  position: fixed; top: var(--safe-y); right: var(--safe-x);
+  display: flex; align-items: center; gap: 1.25rem; padding: 1rem 1.75rem; border-radius: 1.5rem;
+}
+.weather .now { font-size: 3.5rem; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
+.weather .more { display: flex; flex-direction: column; gap: 0.25rem; }
+.weather .label { font-size: 1.5rem; line-height: 1.75rem; font-weight: 600; }
+.weather .range { font-size: 1.4375rem; line-height: 1.75rem; color: rgba(255, 255, 255, 0.78); white-space: pre; }
