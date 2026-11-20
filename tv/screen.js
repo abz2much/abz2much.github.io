@@ -124,8 +124,54 @@ function qrSvg(rows) {
     '<rect width="' + size + '" height="' + size + '" fill="#fff"/><path fill="#111" d="' + path + '"/></svg>';
 }
 
+// ---- app buttons ----
+
+// The only apps that get a button, in this order. Nothing else can be launched from the page.
+var APP_BUTTONS = [
+  { pkg: "com.netflix.ninja", name: "Netflix" },
+  { pkg: "com.amazon.amazonvideo.livingroom", name: "Prime Video" },
+  { pkg: "com.apple.atve.androidtv.appletv", name: "Apple TV" },
+];
+
+// TVOS.apps() JSON -> the buttons to draw: only APP_BUTTONS the TV has, in APP_BUTTONS order.
+function appButtons(appsJson) {
+  var list;
+  try { list = JSON.parse(appsJson); } catch (e) { return []; }
+  if (!Array.isArray(list)) return [];
+  var have = {};
+  list.forEach(function (a) { if (a && typeof a.package === "string") have[a.package] = a; });
+  var out = [];
+  APP_BUTTONS.forEach(function (b) {
+    var a = have[b.pkg];
+    if (!a) return;
+    out.push({ pkg: b.pkg, name: b.name, banner: a.hasBanner ? "http://tvos.invalid/banner/" + b.pkg : null });
+  });
+  return out;
+}
+
+// Left and Right along the row, no wrap; any other key leaves focus where it is (kept inside the row).
+function moveFocus(index, key, count) {
+  if (count <= 0) return 0;
+  var i = Math.min(Math.max(index, 0), count - 1);
+  if (key === "ArrowLeft") i = Math.max(i - 1, 0);
+  if (key === "ArrowRight") i = Math.min(i + 1, count - 1);
+  return i;
+}
+
+// A key event -> "ArrowLeft", "ArrowRight", "Enter" or null. TV remotes may send only a key code
+// (37/21 left, 39/22 right, 13/23 OK), as guest-tv's page handles them.
+function remoteKey(e) {
+  var k = e && e.key, c = e && e.keyCode;
+  if (k === "ArrowLeft" || c === 37 || c === 21) return "ArrowLeft";
+  if (k === "ArrowRight" || c === 39 || c === 22) return "ArrowRight";
+  if (k === "Enter" || c === 13 || c === 23) return "Enter";
+  return null;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    remoteKey: remoteKey,
+    APP_BUTTONS: APP_BUTTONS, appButtons: appButtons, moveFocus: moveFocus,
     formatStay: formatStay, weatherLabel: weatherLabel, clockText: clockText, stillShowable: stillShowable,
     greeting: greeting, stayLine: stayLine, checkoutLine: checkoutLine, dateLine: dateLine,
     weatherIcon: weatherIcon, qrSvg: qrSvg,
@@ -192,6 +238,66 @@ function render(answer) {
   }
 }
 
+// ---- the app row ----
+var apps = [];       // the buttons on screen
+var appFocus = 0;    // which one has the white ring
+
+function drawApps() {
+  var tv = window.TVOS;
+  var next = [];
+  if (tv && typeof tv.apps === "function") {
+    try { next = appButtons(tv.apps()); } catch (e) { next = []; }
+  }
+  var same = next.map(function (b) { return b.pkg + b.banner; }).join() === apps.map(function (b) { return b.pkg + b.banner; }).join();
+  if (same && $("apps").childNodes.length === apps.length) return;
+  var focusedPkg = apps[appFocus] && apps[appFocus].pkg;
+  apps = next;
+  var at = 0;
+  apps.forEach(function (b, i) { if (b.pkg === focusedPkg) at = i; });
+  appFocus = at;
+  var row = $("apps");
+  row.innerHTML = "";
+  apps.forEach(function (b) {
+    var el = document.createElement("div");
+    el.className = "app";
+    var name = document.createElement("span");
+    name.textContent = b.name;
+    el.appendChild(name);
+    if (b.banner) {
+      var img = new Image();
+      img.alt = b.name;
+      img.onerror = function () { if (img.parentNode) img.parentNode.removeChild(img); };   // the name shows instead
+      img.src = b.banner;
+      el.appendChild(img);
+    }
+    row.appendChild(el);
+  });
+  row.hidden = !apps.length;
+  document.body.classList.toggle("has-apps", apps.length > 0);
+  shownTime = "";   // the clock moved: line its frosted fill up again
+  drawClock();
+  markFocus();
+}
+
+function markFocus() {
+  var els = $("apps").childNodes;
+  for (var i = 0; i < els.length; i++) els[i].classList.toggle("focus", i === appFocus);
+}
+
+function onKey(e) {
+  if (!apps.length) return;
+  var k = remoteKey(e);
+  if (!k) return;
+  e.preventDefault();
+  if (k === "Enter") {
+    var b = apps[appFocus];
+    if (b && window.TVOS && typeof window.TVOS.launch === "function") window.TVOS.launch(b.pkg);
+    return;
+  }
+  appFocus = moveFocus(appFocus, k, apps.length);
+  markFocus();
+}
+
 // The last good answer. Shown again while the script cannot be reached, until the guest's stay ends.
 var lastGood = null;
 function show() {
@@ -210,6 +316,8 @@ function refresh() {
 
 function start() {
   render(null);
+  drawApps();
+  document.addEventListener("keydown", onKey);
   var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
   ready.then(function () {
     drawClock();
@@ -219,4 +327,5 @@ function start() {
   window.addEventListener("resize", function () { shownTime = ""; drawClock(); });
   refresh();
   setInterval(refresh, REFRESH_MS);
+  setInterval(drawApps, REFRESH_MS);   // an app installed or removed shows up within 5 minutes
 }
