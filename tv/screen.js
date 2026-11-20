@@ -492,4 +492,8 @@ function start() {
   setInterval(refresh, REFRESH_MS);
   setInterval(readApps, REFRESH_MS);   // an app installed or removed shows up within 5 minutes
   setInterval(checkVersion, REFRESH_MS);
+  // Android freezes Guest TV while another app is in front, so also check soon after the page starts
+  // and whenever it comes back into view, not only every 5 minutes.
+  setTimeout(checkVersion, 10 * 1000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) checkVersion(); });
 }
