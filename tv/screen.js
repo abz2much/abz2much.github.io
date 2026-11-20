@@ -144,7 +144,7 @@ function appButtons(appsJson) {
   APP_BUTTONS.forEach(function (b) {
     var a = have[b.pkg];
     if (!a) return;
-    out.push({ pkg: b.pkg, name: b.name, banner: a.hasBanner ? "http://tvos.invalid/banner/" + b.pkg : null });
+    out.push({ pkg: b.pkg, name: b.name, banner: a.hasBanner ? "https://tvos.invalid/banner/" + b.pkg : null });
   });
   return out;
 }
