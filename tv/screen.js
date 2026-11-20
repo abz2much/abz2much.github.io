@@ -128,6 +128,7 @@ function qrSvg(rows) {
 
 // The only apps that get a button, in this order. Nothing else can be launched from the page.
 var APP_BUTTONS = [
+  { pkg: "com.google.android.youtube.tv", name: "YouTube" },
   { pkg: "com.netflix.ninja", name: "Netflix" },
   { pkg: "com.amazon.amazonvideo.livingroom", name: "Prime Video" },
   { pkg: "com.apple.atve.androidtv.appletv", name: "Apple TV" },
@@ -168,6 +169,39 @@ function remoteKey(e) {
   return null;
 }
 
+// ---- house rules, town ----
+
+// The row: a House rules button first when there are rules, then the app buttons.
+function rowItems(apps, rules) {
+  var row = rules && rules.length ? [{ kind: "rules", name: "House rules" }] : [];
+  (apps || []).forEach(function (b) { row.push({ kind: "app", pkg: b.pkg, name: b.name, banner: b.banner }); });
+  return row;
+}
+
+// "Friday 20 November · ☀ 28° Lagos", leaving out what is not known.
+function dateLineText(d, weather, town) {
+  var line = dateLine(d), extra = [];
+  if (weather) extra.push((weatherIcon(weather.code) ? weatherIcon(weather.code) + " " : "") + weather.now + "°");
+  if (town) extra.push(town);
+  return extra.length ? line + " · " + extra.join(" ") : line;
+}
+
+// Where the ring goes when the row is redrawn: the first button until the guest has pressed a key,
+// then the same button if it is still there, else the first.
+function focusAfterRedraw(oldRow, oldFocus, newRow, touched) {
+  if (!touched) return 0;
+  var was = oldRow && oldRow[oldFocus];
+  if (!was) return 0;
+  for (var i = 0; i < newRow.length; i++) {
+    if (newRow[i].kind === was.kind && (newRow[i].pkg || "") === (was.pkg || "")) return i;
+  }
+  return 0;
+}
+
+function rulesColumns(rules) {
+  return rules && rules.length > 6 ? 2 : 1;
+}
+
 // Reload only when this page knows its own version and a different, well-formed one is published.
 function needsReload(current, published) {
   var v = published && published.v;
@@ -177,6 +211,7 @@ function needsReload(current, published) {
 
 if (typeof module !== "undefined") {
   module.exports = {
+    rowItems: rowItems, dateLineText: dateLineText, rulesColumns: rulesColumns, focusAfterRedraw: focusAfterRedraw,
     needsReload: needsReload, remoteKey: remoteKey,
     APP_BUTTONS: APP_BUTTONS, appButtons: appButtons, moveFocus: moveFocus,
     formatStay: formatStay, weatherLabel: weatherLabel, clockText: clockText, stillShowable: stillShowable,
@@ -216,9 +251,7 @@ function render(answer) {
   var guest = answer && answer.guest;
   var w = answer && answer.weather;
 
-  var line = dateLine(now);
-  if (w) line += " · " + (weatherIcon(w.code) ? weatherIcon(w.code) + " " : "") + w.now + "°";
-  $("dateline").textContent = line;
+  $("dateline").textContent = dateLineText(now, w, answer && answer.town);
 
   var place = answer && answer.place;
   $("place").textContent = place || "";
@@ -237,6 +270,8 @@ function render(answer) {
   $("wifi-name").textContent = wifi ? wifi.name : "";
   $("wifi-card").hidden = !qr;
 
+  setRules(answer && answer.rules);
+
   $("weather-card").hidden = !w;
   if (w) {
     $("wx-now").textContent = w.now + "°";
@@ -245,42 +280,71 @@ function render(answer) {
   }
 }
 
-// ---- the app row ----
-var apps = [];       // the buttons on screen
-var appFocus = 0;    // which one has the white ring
+// ---- the row: House rules, then the apps (only inside the Guest TV app) ----
+var appList = [];    // from TVOS.apps(), re-read every 5 minutes
+var rules = [];      // from the script's answer
+var row = [];        // what is on screen: rowItems(appList, rules)
+var rowFocus = 0;    // which one has the gold ring
+var drawnKey = null;
+var panelOpen = false;
+var touched = false;   // the guest has pressed a key on the row
 
-function drawApps() {
+function readApps() {
   var tv = window.TVOS;
   var next = [];
   if (tv && typeof tv.apps === "function") {
     try { next = appButtons(tv.apps()); } catch (e) { next = []; }
   }
-  var same = next.map(function (b) { return b.pkg + b.banner; }).join() === apps.map(function (b) { return b.pkg + b.banner; }).join();
-  if (same && $("apps").childNodes.length === apps.length) return;
-  var focusedPkg = apps[appFocus] && apps[appFocus].pkg;
-  apps = next;
-  var at = 0;
-  apps.forEach(function (b, i) { if (b.pkg === focusedPkg) at = i; });
-  appFocus = at;
-  var row = $("apps");
-  row.innerHTML = "";
-  apps.forEach(function (b) {
-    var el = document.createElement("div");
-    el.className = "app";
-    var name = document.createElement("span");
-    name.textContent = b.name;
-    el.appendChild(name);
-    if (b.banner) {
-      var img = new Image();
-      img.alt = b.name;
-      img.onerror = function () { if (img.parentNode) img.parentNode.removeChild(img); };   // the name shows instead
-      img.src = b.banner;
-      el.appendChild(img);
+  appList = next;
+  drawRow();
+}
+
+function setRules(next) {
+  rules = Array.isArray(next) ? next.filter(function (r) { return typeof r === "string"; }) : [];
+  drawRow();
+  if (panelOpen) fillPanel();
+  if (panelOpen && !rules.length) closePanel();
+}
+
+function drawRow() {
+  var inApp = !!window.TVOS;
+  var next = inApp ? rowItems(appList, rules) : [];
+  var key = next.map(function (i) { return i.kind + (i.pkg || "") + (i.banner || ""); }).join();
+  if (key === drawnKey) return;
+  rowFocus = focusAfterRedraw(row, rowFocus, next, touched);
+  drawnKey = key;
+  row = next;
+  var el = $("apps");
+  el.innerHTML = "";
+  el.classList.toggle("many", row.length > 4);
+  row.forEach(function (it) {
+    var b = document.createElement("div");
+    if (it.kind === "rules") {
+      b.className = "app rules-btn";
+      var icon = document.createElement("i");   // a list icon, drawn (not an emoji, which some TVs lack)
+      icon.innerHTML = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+        '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>';
+      var t = document.createElement("span");
+      t.textContent = it.name;
+      b.appendChild(icon);
+      b.appendChild(t);
+    } else {
+      b.className = "app";
+      var name = document.createElement("span");
+      name.textContent = it.name;
+      b.appendChild(name);
+      if (it.banner) {
+        var img = new Image();
+        img.alt = it.name;
+        img.onerror = function () { if (img.parentNode) img.parentNode.removeChild(img); };   // the name shows instead
+        img.src = it.banner;
+        b.appendChild(img);
+      }
     }
-    row.appendChild(el);
+    el.appendChild(b);
   });
-  row.hidden = !apps.length;
-  document.body.classList.toggle("has-apps", apps.length > 0);
+  el.hidden = !row.length;
+  document.body.classList.toggle("has-apps", row.length > 0);
   shownTime = "";   // the clock moved: line its frosted fill up again
   drawClock();
   markFocus();
@@ -288,21 +352,62 @@ function drawApps() {
 
 function markFocus() {
   var els = $("apps").childNodes;
-  for (var i = 0; i < els.length; i++) els[i].classList.toggle("focus", i === appFocus);
+  for (var i = 0; i < els.length; i++) els[i].classList.toggle("focus", i === rowFocus && !panelOpen);
+}
+
+function fillPanel() {
+  var place = current && current.place;
+  $("rules-place").textContent = place || "";
+  $("rules-place").hidden = !place;
+  var list = $("rules-list");
+  list.innerHTML = "";
+  list.classList.toggle("two", rulesColumns(rules) === 2);
+  rules.forEach(function (r) {
+    var li = document.createElement("li");
+    li.textContent = r;
+    list.appendChild(li);
+  });
+}
+
+function openPanel() {
+  if (!rules.length) return;
+  fillPanel();
+  panelOpen = true;
+  $("rules-panel").hidden = false;
+  markFocus();
+}
+
+function closePanel() {
+  panelOpen = false;
+  $("rules-panel").hidden = true;
+  markFocus();
 }
 
 function onKey(e) {
-  if (!apps.length) return;
+  if (!row.length) return;
   var k = remoteKey(e);
   if (!k) return;
   e.preventDefault();
-  if (k === "Enter") {
-    var b = apps[appFocus];
-    if (b && window.TVOS && typeof window.TVOS.launch === "function") window.TVOS.launch(b.pkg);
+  touched = true;
+  if (panelOpen) {
+    if (k === "Enter") closePanel();   // Left and Right do nothing while it is open
     return;
   }
-  appFocus = moveFocus(appFocus, k, apps.length);
+  if (k === "Enter") {
+    var it = row[rowFocus];
+    if (!it) return;
+    if (it.kind === "rules") openPanel();
+    else if (window.TVOS && typeof window.TVOS.launch === "function") window.TVOS.launch(it.pkg);
+    return;
+  }
+  rowFocus = moveFocus(rowFocus, k, row.length);
   markFocus();
+}
+
+// The Guest TV app passes a short press of Back to the page here (MainActivity: window.tv.back()).
+if (typeof window !== "undefined") {
+  window.tv = window.tv || {};
+  window.tv.back = function () { if (panelOpen) closePanel(); };
 }
 
 // The last good answer. Shown again while the script cannot be reached, until the guest's stay ends.
@@ -338,7 +443,7 @@ function checkVersion() {
 
 function start() {
   render(null);
-  drawApps();
+  readApps();
   document.addEventListener("keydown", onKey);
   var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
   ready.then(function () {
@@ -349,6 +454,6 @@ function start() {
   window.addEventListener("resize", function () { shownTime = ""; drawClock(); });
   refresh();
   setInterval(refresh, REFRESH_MS);
-  setInterval(drawApps, REFRESH_MS);   // an app installed or removed shows up within 5 minutes
+  setInterval(readApps, REFRESH_MS);   // an app installed or removed shows up within 5 minutes
   setInterval(checkVersion, REFRESH_MS);
 }

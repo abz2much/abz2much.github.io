@@ -51,7 +51,7 @@ body {
 }
 .clock .fill {
   display: block; padding: 0.2em 0; margin: -0.2em 0; color: transparent;
-  background-image: url(photo-glass.jpg?v=225dc8d);
+  background-image: url(photo-glass.jpg?v=085a2a1);
   -webkit-background-clip: text; background-clip: text; background-size: 100vw 100vh; background-repeat: no-repeat;
   filter: brightness(1.12) saturate(1.15);
 }
@@ -110,3 +110,18 @@ body.has-apps .hello { bottom: 27.875rem; }
 
 /* "Check-out" and "Sunday 11am" on two lines. */
 #checkout { white-space: pre-line; }
+
+/* ---------- House rules: a button at the start of the row, and its panel ---------- */
+.apps.many { gap: 3.5rem; }
+.rules-btn { background: rgba(22, 22, 28, 0.62); -webkit-backdrop-filter: blur(1.75rem); backdrop-filter: blur(1.75rem); gap: 0.75rem; flex-direction: row; }
+.rules-btn i { display: block; width: 1.875rem; height: 1.875rem; flex: none; }
+.rules-btn span { font-size: 1.625rem; font-weight: 650; }
+.rules-panel { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.rules-box { position: relative; width: 76rem; max-height: 56rem; border-radius: 2rem; padding: 3.5rem 4.5rem 5rem; background: rgba(22, 22, 28, 0.8); overflow: hidden; }
+.rules-box .eyebrow { padding: 0; margin: 0; }
+.rules-box h2 { margin: 0.5rem 0 2rem; font-size: 3.75rem; line-height: 4.25rem; font-weight: 700; letter-spacing: -0.025em; }
+#rules-list { list-style: none; font-size: 2rem; line-height: 2.75rem; }
+#rules-list.two { columns: 2; column-gap: 4rem; font-size: 1.75rem; line-height: 2.375rem; }
+#rules-list li { position: relative; padding-left: 1.75rem; margin-bottom: 0.875rem; break-inside: avoid; overflow-wrap: anywhere; }
+#rules-list li::before { content: ""; position: absolute; left: 0; top: 0.69em; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #ffc83d; transform: translateY(-50%); }
+.rules-hint { position: absolute; left: 4.5rem; bottom: 2rem; font-size: 1.4375rem; color: rgba(255, 255, 255, 0.7); }
