@@ -51,7 +51,7 @@ body {
 }
 .clock .fill {
   display: block; padding: 0.2em 0; margin: -0.2em 0; color: transparent;
-  background-image: url(photo-glass.jpg);
+  background-image: url(photo-glass.jpg?v=225dc8d);
   -webkit-background-clip: text; background-clip: text; background-size: 100vw 100vh; background-repeat: no-repeat;
   filter: brightness(1.12) saturate(1.15);
 }
@@ -94,7 +94,7 @@ body {
 }
 .app img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
 .app span { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.01em; }
-.app.focus { transform: scale(1.08); box-shadow: 0 0 0 0.3rem #fff, 0 1.25rem 3rem rgba(0, 0, 0, 0.45); }
+.app.focus { transform: scale(1.08); box-shadow: 0 0 0 0.375rem #ffc83d, 0 1.25rem 3rem rgba(0, 0, 0, 0.45); }   /* gold: shows on white, red, blue and black banners */
 
 body.has-apps .clock { top: 6.25rem; font-size: 17.5rem; }
 body.has-apps .cards { bottom: 13.375rem; height: 13rem; }
@@ -107,3 +107,6 @@ body.has-apps .hello { bottom: 27.875rem; }
 .eyebrow, .hello h1 { padding: 1.5rem; margin-left: -1.5rem; margin-right: -1.5rem; margin-bottom: -1.5rem; }
 .hello h1 { margin-top: -1rem; }
 .eyebrow { margin-top: -1.5rem; }
+
+/* "Check-out" and "Sunday 11am" on two lines. */
+#checkout { white-space: pre-line; }

@@ -87,11 +87,11 @@ function stayLine(checkIn, checkOut, today) {
   return start + " to " + end + " · " + tail;
 }
 
-// "Out Sunday 10am", or "" when no time is set.
+// "Check-out" and "Sunday 10am" on two lines, or "" when no time is set.
 function checkoutLine(checkOut, time) {
   var t = typeof time === "string" ? time.trim() : "";
   if (!t) return "";
-  return "Out " + DAYS[calendarDay(checkOut).getDay()] + " " + t;
+  return "Check-out\n" + DAYS[calendarDay(checkOut).getDay()] + " " + t;   // two lines: it does not fit on one
 }
 
 // "Friday 20 November"
@@ -168,9 +168,16 @@ function remoteKey(e) {
   return null;
 }
 
+// Reload only when this page knows its own version and a different, well-formed one is published.
+function needsReload(current, published) {
+  var v = published && published.v;
+  if (!current || typeof v !== "string" || !/^[0-9A-Za-z._-]{1,40}$/.test(v)) return false;
+  return v !== current;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
-    remoteKey: remoteKey,
+    needsReload: needsReload, remoteKey: remoteKey,
     APP_BUTTONS: APP_BUTTONS, appButtons: appButtons, moveFocus: moveFocus,
     formatStay: formatStay, weatherLabel: weatherLabel, clockText: clockText, stillShowable: stillShowable,
     greeting: greeting, stayLine: stayLine, checkoutLine: checkoutLine, dateLine: dateLine,
@@ -314,6 +321,21 @@ function refresh() {
     .then(show);
 }
 
+// ---- auto-update: reload when a new version of the page is published (tools/publish.js) ----
+function myVersion() {
+  var m = document.querySelector('meta[name="lite-version"]');
+  return m ? m.getAttribute("content") : "";
+}
+
+function checkVersion() {
+  var mine = myVersion();
+  if (!mine) return;   // a local copy: never reloads
+  fetch("version.json", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (published) { if (needsReload(mine, published)) location.reload(); })
+    .catch(function () {});
+}
+
 function start() {
   render(null);
   drawApps();
@@ -328,4 +350,5 @@ function start() {
   refresh();
   setInterval(refresh, REFRESH_MS);
   setInterval(drawApps, REFRESH_MS);   // an app installed or removed shows up within 5 minutes
+  setInterval(checkVersion, REFRESH_MS);
 }
