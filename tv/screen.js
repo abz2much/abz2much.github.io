@@ -463,13 +463,18 @@ function myVersion() {
   return m ? m.getAttribute("content") : "";
 }
 
+// Each check writes one line to the console; on the TV it lands in the TV's log (adb logcat, tag chromium).
 function checkVersion() {
   var mine = myVersion();
   if (!mine) return;   // a local copy: never reloads
   fetch("version.json", { cache: "no-store" })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (published) { if (needsReload(mine, published)) location.reload(); })
-    .catch(function () {});
+    .then(function (published) {
+      var reload = needsReload(mine, published);
+      console.log("[guest-tv-lite] version check: mine=" + mine + " published=" + (published && published.v) + (reload ? " -> reloading" : ""));
+      if (reload) location.reload();
+    })
+    .catch(function (e) { console.log("[guest-tv-lite] version check failed: " + e); });
 }
 
 function start() {
