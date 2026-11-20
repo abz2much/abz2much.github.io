@@ -9,22 +9,36 @@
 <body>
 <div class="scene" aria-hidden="true">
   <img src="photo.jpg" alt="">
-  <div class="clock" id="clock"></div>
-  <img src="photo-fg.webp" alt="" onerror="this.remove()">
   <div class="shade"></div>
 </div>
 
-<div class="weather glass" id="weather" hidden>
-  <div class="now" id="wx-now"></div>
-  <div class="more">
-    <div class="label" id="wx-label"></div>
-    <div class="range" id="wx-range"></div>
-  </div>
-</div>
+<div class="dateline" id="dateline"></div>
+<div class="clock" id="clock" aria-hidden="true"></div>
 
 <div class="hello">
+  <div class="eyebrow" id="place" hidden></div>
   <h1 id="title">Welcome</h1>
   <p id="stay" hidden></p>
+</div>
+
+<div class="cards">
+  <div class="card glass" id="stay-card" hidden>
+    <div class="label">Your stay</div>
+    <div class="big" id="checkout"></div>
+  </div>
+  <div class="card glass wifi" id="wifi-card" hidden>
+    <div class="qr" id="wifi-qr"></div>
+    <div>
+      <div class="label">Wi-Fi</div>
+      <div class="big" id="wifi-name"></div>
+      <div class="small">Scan with your camera to join</div>
+    </div>
+  </div>
+  <div class="card glass" id="weather-card" hidden>
+    <div class="label">Weather</div>
+    <div class="temp" id="wx-now"></div>
+    <div class="small" id="wx-more"></div>
+  </div>
 </div>
 
 <script src="config.js"></script>
