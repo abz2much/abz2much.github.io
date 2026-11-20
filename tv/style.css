@@ -51,7 +51,7 @@ body {
 }
 .clock .fill {
   display: block; padding: 0.2em 0; margin: -0.2em 0; color: transparent;
-  background-image: url(photo-glass.jpg?v=085a2a1);
+  background-image: url(photo-glass.jpg?v=ace5cd1);
   -webkit-background-clip: text; background-clip: text; background-size: 100vw 100vh; background-repeat: no-repeat;
   filter: brightness(1.12) saturate(1.15);
 }
@@ -125,3 +125,7 @@ body.has-apps .hello { bottom: 27.875rem; }
 #rules-list li { position: relative; padding-left: 1.75rem; margin-bottom: 0.875rem; break-inside: avoid; overflow-wrap: anywhere; }
 #rules-list li::before { content: ""; position: absolute; left: 0; top: 0.69em; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #ffc83d; transform: translateY(-50%); }
 .rules-hint { position: absolute; left: 4.5rem; bottom: 2rem; font-size: 1.4375rem; color: rgba(255, 255, 255, 0.7); }
+
+/* The rules scroll inside a fixed area (Down and Up on the remote); the hint says when there is more. */
+.rules-scroll { max-height: 38rem; overflow: hidden; }
+.rules-hint { font-weight: 600; }

@@ -165,6 +165,8 @@ function remoteKey(e) {
   var k = e && e.key, c = e && e.keyCode;
   if (k === "ArrowLeft" || c === 37 || c === 21) return "ArrowLeft";
   if (k === "ArrowRight" || c === 39 || c === 22) return "ArrowRight";
+  if (k === "ArrowUp" || c === 38 || c === 19) return "ArrowUp";
+  if (k === "ArrowDown" || c === 40 || c === 20) return "ArrowDown";
   if (k === "Enter" || c === 13 || c === 23) return "Enter";
   return null;
 }
@@ -198,6 +200,18 @@ function focusAfterRedraw(oldRow, oldFocus, newRow, touched) {
   return 0;
 }
 
+// The rules panel scrolls: Down and Up move by a step, between 0 and the most it can scroll.
+function scrollRules(top, key, max, step) {
+  if (max <= 0) return 0;
+  if (key === "ArrowDown") return Math.min(top + step, max);
+  if (key === "ArrowUp") return Math.max(top - step, 0);
+  return top;
+}
+
+function rulesHint(top, max) {
+  return top < max ? "More below · press Down" : "Press Back to close";
+}
+
 function rulesColumns(rules) {
   return rules && rules.length > 6 ? 2 : 1;
 }
@@ -212,6 +226,7 @@ function needsReload(current, published) {
 if (typeof module !== "undefined") {
   module.exports = {
     rowItems: rowItems, dateLineText: dateLineText, rulesColumns: rulesColumns, focusAfterRedraw: focusAfterRedraw,
+    scrollRules: scrollRules, rulesHint: rulesHint,
     needsReload: needsReload, remoteKey: remoteKey,
     APP_BUTTONS: APP_BUTTONS, appButtons: appButtons, moveFocus: moveFocus,
     formatStay: formatStay, weatherLabel: weatherLabel, clockText: clockText, stillShowable: stillShowable,
@@ -302,7 +317,7 @@ function readApps() {
 function setRules(next) {
   rules = Array.isArray(next) ? next.filter(function (r) { return typeof r === "string"; }) : [];
   drawRow();
-  if (panelOpen) fillPanel();
+  if (panelOpen) { fillPanel(); showHint(); }
   if (panelOpen && !rules.length) closePanel();
 }
 
@@ -369,11 +384,22 @@ function fillPanel() {
   });
 }
 
+function scrollMax() {
+  var box = $("rules-scroll");
+  return Math.max(0, box.scrollHeight - box.clientHeight);
+}
+
+function showHint() {
+  $("rules-hint").textContent = rulesHint($("rules-scroll").scrollTop, scrollMax() - 1);
+}
+
 function openPanel() {
   if (!rules.length) return;
   fillPanel();
   panelOpen = true;
   $("rules-panel").hidden = false;
+  $("rules-scroll").scrollTop = 0;
+  showHint();
   markFocus();
 }
 
@@ -391,6 +417,11 @@ function onKey(e) {
   touched = true;
   if (panelOpen) {
     if (k === "Enter") closePanel();   // Left and Right do nothing while it is open
+    if (k === "ArrowUp" || k === "ArrowDown") {
+      var box = $("rules-scroll");
+      box.scrollTop = scrollRules(box.scrollTop, k, scrollMax(), Math.round(box.clientHeight / 3));
+      showHint();
+    }
     return;
   }
   if (k === "Enter") {
